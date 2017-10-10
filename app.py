@@ -1,6 +1,6 @@
 import json
 
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO, disconnect, emit
 
 from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG
@@ -13,7 +13,7 @@ socketio = SocketIO(app)
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return render_template('music.html')
 
 
 @socketio.on('mopidy', namespace='/mopidy')

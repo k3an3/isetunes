@@ -1,4 +1,6 @@
+eventlet
 flask
 flask-socketio
 flask-login
 peewee
+requests
