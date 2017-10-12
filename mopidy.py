@@ -103,7 +103,10 @@ class Mopidy:
         return self.send('core.playback.get_time_position')
 
     def get_volume(self):
-        return self.send('core.playback.get_volume')
+        return int(self.send('core.mixer.get_volume')['result'])
+
+    def set_volume(self, volume: int):
+        return self.send('core.mixer.set_volume', volume=volume)
 
     def next(self):
         return self.send('core.playback.next')

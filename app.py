@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import functools
 import json
+from time import sleep
 
 from flask import Flask, render_template, redirect, request, flash
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
@@ -9,7 +10,7 @@ from peewee import DoesNotExist, SqliteDatabase
 
 from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG, DB, LDAP_HOST
 from models import db_init, User
-from mopidy import UNAUTH_COMMANDS, Mopidy
+from mopidy import Mopidy
 from utils import ldap_auth
 
 app = Flask(__name__)
@@ -49,23 +50,61 @@ def mopidy_refresh():
         emit({})
 
 
-@socketio.on('mopidy')
-@ws_login_required
-def mopidy_ws(data, **kwargs):
-    auth = kwargs.pop('auth', False)
-    action = data.pop('action')
-    if not auth and action not in UNAUTH_COMMANDS:
-        print("Disconnected client from Mopidy endpoint, not authorized/invalid command")
-        disconnect()
-    if action == 'search':
-        results = mopidy.search(**data)
+@socketio.on('search')
+def search(data):
+    if data.get('query'):
+        results = mopidy.search(data['query'])
         try:
-            results = results['result'][0]['tracks']
+            results = results['result'][1]['tracks'][:15]
             emit('search results', json.dumps(results))
         except Exception as e:
             pass
-    elif action == 'add_track':
-        r = mopidy.add_track(**data)
+
+
+@socketio.on('request')
+@ws_login_required
+def request(data):
+    mopidy.add_track(data)
+
+
+@socketio.on('admin')
+@ws_login_required
+def mopidy_ws(data):
+    if not current_user.admin:
+        disconnect()
+    action = data.pop('action')
+    if action == 'play':
+        mopidy.play()
+    elif action == 'pause':
+        mopidy.pause()
+    elif action == 'next':
+        mopidy.next()
+    elif action == 'prev':
+        mopidy.previous()
+    elif action == 'volup':
+        current_volume = mopidy.get_volume()
+        if current_volume <= 100 - 4:
+            current_volume += 4
+            mopidy.set_volume(current_volume)
+    elif action == 'voldown':
+        current_volume = mopidy.get_volume()
+        if current_volume >= 0 + 4:
+            current_volume -= 4
+            mopidy.set_volume(current_volume)
+    elif action == 'fadedown':
+        current_volume = mopidy.get_volume()
+        for i in range(current_volume, current_volume - 20, -1):
+            if i < 0:
+                break
+            mopidy.set_volume(i)
+            sleep(0.2)
+    elif action == 'fadeup':
+        current_volume = mopidy.get_volume()
+        for i in range(current_volume, current_volume + 20):
+            if i > 100:
+                break
+            mopidy.set_volume(i)
+            sleep(0.2)
 
 
 @login_manager.user_loader

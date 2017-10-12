@@ -67,30 +67,42 @@
              alt="No data"/>
         <h3 id="song-title">Nothing Playing</h3>
         <h4 id="song-artist"></h4>
+        {% if current_user.admin %}
+            <div class="input-group">
+        <span class="input-group-btn">
+            <button id="play" class="btn btn-primary ctl">Play</button>
+            <button id="pause" class="btn btn-success ctl">Pause</button>
+            <button id="back" class="btn btn-warning ctl">Prev</button>
+            <button id="next" class="btn btn-warning ctl">Next</button>
+            <button id="voldown" class="btn btn-info ctl">Vol -</button>
+            <button id="volup" class="btn btn-info ctl">Vol +</button>
+            <button id="fadedown" class="btn btn-info ctl">Fade -20%</button>
+            <button id="fadeup" class="btn btn-info ctl">Boost +20%</button>
+        </span>
+            </div>
+        {% endif %}
     </div>
     <div class="col-xs-6">
-    {% if current_user.is_authenticated %}
-        <div class="input-group">
-            <input id="search" type="text" class="form-control" placeholder="Search" aria-describedby="basic-addon1">
-            <span class="input-group-btn">
-                <button id="search-btn" class="btn btn-default" type="button">Search</button>
-              </span>
-        </div>
-        <ul id="results" class="list-group">
-        </ul>
-    {% else %}
-        <h2>Log In</h2>
-        <p>By logging in, you can request and vote on music!</p>
-        <form action="/login" method="post">
-            <div class="input-group" style="width:400px">
-                <input class="form-control" type="text" placeholder="username" name="username">
-                <span class="input-group-addon">@iseage.org</span>
+        {% if current_user.is_authenticated %}
+            <input id="search" type="text" class="form-control" placeholder="Search for songs, artists, albums" aria-describedby="basic-addon1">
+            <div id="loading" class="progress progress-striped active">
+                <div class="progress-bar progress-bar-info" style="width: 100%"></div>
             </div>
-            <input style="width:400px;" class="form-control" type="password" placeholder="*********" name="password">
-            <br>
-            <input type="submit" class="btn btn-lg btn-primary" value="Go!">
-        </form>
-    {% endif %}
+            <ul style="margin-top:25px;" id="results" class="list-group">
+            </ul>
+        {% else %}
+            <h2>Log In</h2>
+            <p>By logging in, you can request and vote on music!</p>
+            <form action="/login" method="post">
+                <div class="input-group" style="width:400px">
+                    <input class="form-control" type="text" placeholder="username" name="username">
+                    <span class="input-group-addon">@iseage.org</span>
+                </div>
+                <input style="width:400px;" class="form-control" type="password" placeholder="*********" name="password">
+                <br>
+                <input type="submit" class="btn btn-lg btn-primary" value="Go!">
+            </form>
+        {% endif %}
     </div>
 </div>
 <script src="/static/jquery.min.js"></script>
@@ -98,6 +110,8 @@
 <script>
     var ws = io.connect('//' + document.domain + ':' + location.port);
     var song = null;
+    var loading = $('#loading');
+    loading.hide();
 
     ws.on('track', function (data) {
         song = JSON.parse(data);
@@ -106,26 +120,20 @@
         $('#album-art').attr('src', song.art);
     });
 
-    $('#search-btn').click(function () {
-        ws.emit('mopidy', {
-            action: 'search',
+    $('#search').on('input', function () {
+        loading.fadeIn();
+        ws.emit('search', {
             query: $('#search').val()
         });
-    });
-
-    $('#search').keypress(function (e) {
-        if (e.which == 13) {
-            $('#search-btn').click();
-            return false;
-        }
     });
 
     ws.on('search results', function (data) {
         $('#results').empty();
         var songs = JSON.parse(data);
         songs.forEach(function (song) {
-            $('#results').append('<button class="btn btn-default btn-block song-result" id="' + song.uri + '">' + song.name + ' - ' + song.artists[0].name + '</button>');
+            $('#results').append('<button class="btn btn-info btn-block song-result" id="' + song.uri + '">' + song.name + ' - ' + song.artists[0].name + '</button>');
         });
+        loading.fadeOut();
     });
 
     ws.on('disconnect', function () {
@@ -142,6 +150,11 @@
             action: 'add_track',
             uri: $(this).attr('id')
         });
+    });
+
+    $('.ctl').on('click', function() {
+        console.log(this);
+        ws.emit('admin', {action: $(this).attr('id')});
     });
 
     function refresh() {
