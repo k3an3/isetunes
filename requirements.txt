@@ -1,3 +1,4 @@
+passlib
 eventlet
 flask
 flask-socketio

@@ -74,7 +74,9 @@ class Mopidy:
     def __init__(self, host, client_id=None, client_secret=None):
         self.host = "http://" + host + ":6680/mopidy/rpc"
         self.id = 1
-        self.spotify = Spotify(client_id, client_secret)
+        self.spotify = None
+        if client_id and client_secret:
+            self.spotify = Spotify(client_id, client_secret)
         self.song = None
 
     def send(self, method, **kwargs):
@@ -82,10 +84,16 @@ class Mopidy:
         return requests.post(self.host, data=json.dumps(msg)).json()
 
     def get_current_track(self):
-        song = self.send('core.playback.get_current_tl_track')['result']['track']
+        try:
+            song = self.send('core.playback.get_current_tl_track')['result']['track']
+        except TypeError:
+            return None
         if not self.song or not song['uri'] == self.song['uri']:
             self.song = song
-            self.song['art'] = self.spotify.get_album_art(song['album']['uri'].split(':')[2])
+            if self.spotify:
+                self.song['art'] = self.spotify.get_album_art(song['album']['uri'].split(':')[2])
+            else:
+                self.song['art'] = '/static/album.png'
         return self.song
 
     def get_state(self):
