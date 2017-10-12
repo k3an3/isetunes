@@ -5,6 +5,7 @@ mopidy.py
 Websocket JSONRPC client for the Mopidy media server
 """
 import json
+from time import sleep
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -107,6 +108,15 @@ class Mopidy:
 
     def set_volume(self, volume: int):
         return self.send('core.mixer.set_volume', volume=volume)
+
+    def fade(self, change: int, delay: int = 0.2):
+        current_volume = self.get_volume()
+        end_volume = current_volume + change
+        for i in range(current_volume, end_volume, 1 if change > 0 else -1):
+            if 0 < i > 100:
+                break
+            self.set_volume(i)
+            sleep(delay)
 
     def next(self):
         return self.send('core.playback.next')

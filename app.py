@@ -64,7 +64,7 @@ def search(data):
 @socketio.on('request')
 @ws_login_required
 def request(data):
-    mopidy.add_track(data)
+    mopidy.add_track(data['uri'])
 
 
 @socketio.on('admin')
@@ -82,29 +82,13 @@ def mopidy_ws(data):
     elif action == 'prev':
         mopidy.previous()
     elif action == 'volup':
-        current_volume = mopidy.get_volume()
-        if current_volume <= 100 - 4:
-            current_volume += 4
-            mopidy.set_volume(current_volume)
+        mopidy.fade(4)
     elif action == 'voldown':
-        current_volume = mopidy.get_volume()
-        if current_volume >= 0 + 4:
-            current_volume -= 4
-            mopidy.set_volume(current_volume)
+        mopidy.fade(-4)
     elif action == 'fadedown':
-        current_volume = mopidy.get_volume()
-        for i in range(current_volume, current_volume - 20, -1):
-            if i < 0:
-                break
-            mopidy.set_volume(i)
-            sleep(0.2)
+        mopidy.fade(-20)
     elif action == 'fadeup':
-        current_volume = mopidy.get_volume()
-        for i in range(current_volume, current_volume + 20):
-            if i > 100:
-                break
-            mopidy.set_volume(i)
-            sleep(0.2)
+        mopidy.fade(20)
 
 
 @login_manager.user_loader

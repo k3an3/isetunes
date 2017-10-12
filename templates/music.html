@@ -146,8 +146,7 @@
     });
 
     $('#results').on('click', '.song-result', function () {
-        ws.emit('mopidy', {
-            action: 'add_track',
+        ws.emit('request', {
             uri: $(this).attr('id')
         });
     });
