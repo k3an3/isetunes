@@ -23,22 +23,22 @@ SPOTIFY_API = 'https://api.spotify.com/v1/{}'
 
 
 class Spotify:
-    def __init__(self, client_id, client_secret):
+    def __init__(self, client_id: str, client_secret: str):
         self.token = self.auth(client_id, client_secret)
 
-    def spotify_get(self, query):
+    def spotify_get(self, query: str) -> str:
         return requests.get(SPOTIFY_API.format(query), headers={'Authorization': 'Bearer ' + self.token}).json()
 
-    def auth(self, cid, cs):
+    def auth(self, cid: str, cs: str) -> None:
         data = {
             'grant_type': 'client_credentials'
         }
         r = requests.post('https://accounts.spotify.com/api/token',
-                         data=data,
-                         auth=HTTPBasicAuth(cid, cs))
+                          data=data,
+                          auth=HTTPBasicAuth(cid, cs))
         return r.json().get('access_token')
 
-    def get_album_art(self, album_id, image=1):
+    def get_album_art(self, album_id: str, image: int = 1):
         r = self.spotify_get('albums/' + album_id)['images'][image]['url']
         return r
 
@@ -52,7 +52,7 @@ class Mopidy:
             self.spotify = Spotify(client_id, client_secret)
         self.song = None
 
-    def send(self, method, **kwargs):
+    def send(self, method: str, **kwargs):
         msg = {"jsonrpc": "2.0", "id": self.id, 'method': method, 'params': dict(kwargs)}
         return requests.post(self.host, data=json.dumps(msg)).json()
 
@@ -76,7 +76,10 @@ class Mopidy:
         return self.send('core.playback.get_time_position')
 
     def get_volume(self):
-        return int(self.send('core.mixer.get_volume')['result'])
+        vol = self.send('core.mixer.get_volume')['result']
+        if vol:
+            return int(vol)
+        return 0
 
     def set_volume(self, volume: int):
         return self.send('core.mixer.set_volume', volume=volume)
@@ -96,7 +99,7 @@ class Mopidy:
     def pause(self):
         return self.send('core.playback.pause')
 
-    def play(self, track=None):
+    def play(self, track: str = None):
         return self.send('core.playback.play', tl_track=track)
 
     def previous(self):
@@ -114,8 +117,11 @@ class Mopidy:
     def get_playlists(self):
         return self.send('core.playlists.as_list')
 
-    def add_track(self, uri):
-        return self.send('core.tracklist.add', uri=uri)
+    def add_track(self, uri: str, position: int = None):
+        return self.send('core.tracklist.add', uri=uri, at_position=position)
+
+    def play_song_next(self, uri: str):
+        return self.add_track(uri=uri, position=self.next_track()['tlid']-1)
 
     def get_tracks(self):
         return self.send('core.tracklist.get_tracks')['result']
@@ -123,8 +129,14 @@ class Mopidy:
     def get_tracklist_length(self):
         return self.send('core.tracklist.get_length')['result']
 
-    def search(self, query):
+    def search(self, query: str):
         return self.send('core.library.search', any=[query])
+
+    def lookup(self, uri: str):
+        return self.send('core.library.search', uri=uri)['result'][1]['tracks'][0]
+
+    def next_track(self, tl_track: str = None):
+        return self.send('core.tracklist.next_track', tl_track=tl_track)['result']
 
     def custom(self, target, key, value):
         if value == 'true':

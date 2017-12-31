@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/static/hacker.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>ISETunes</title>
     <style>
         .tall-row {
@@ -52,13 +53,15 @@
 <div class="container">
     {% with messages = get_flashed_messages() %}
         {% if messages %}
-            <div id="messages" class="alert alert-dismissable alert-danger">
+            <div id="messages" class="alert alert-dismissable alert-info">
                 {% for message in messages %}
                     {{ message }}
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
+    <div id="messages2">
+    </div>
 
     <div class="col-xs-6">
         <h2>Now Playing:</h2>
@@ -80,10 +83,14 @@
             <button id="fadeup" class="btn btn-info ctl">Boost +20%</button>
         </span>
             </div>
+        {% endif %}
             <h2>Up Next</h2>
             <ul style="margin-top:25px;" id="queue" class="list-group">
             </ul>
-        {% endif %}
+            <hr>
+            <h3>Requests</h3>
+            <ul style="margin-top:25px;" id="requests" class="list-group">
+            </ul>
     </div>
     <div class="col-xs-6">
         {% if current_user.is_authenticated %}

@@ -6,8 +6,9 @@ from flask_login import LoginManager, current_user, login_required, logout_user,
 from flask_socketio import SocketIO, disconnect, emit
 from peewee import DoesNotExist, SqliteDatabase
 
-from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG, DB, LDAP_HOST
-from models import db_init, User
+from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG, DB, LDAP_HOST, \
+    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP
+from models import db_init, User, SongRequest, Vote
 from mopidy import Mopidy
 from utils import ldap_auth
 
@@ -29,6 +30,10 @@ def ws_login_required(f):
     return wrapped
 
 
+def message(msg: str, alert: str = 'info', broadcast: bool = False):
+    socketio.emit('msg', {'class': alert, 'msg': msg}, broadcast=broadcast)
+
+
 @app.route("/")
 def index():
     return render_template('music.html')
@@ -46,11 +51,18 @@ def mopidy_refresh():
         })
     else:
         emit({})
-    length = mopidy.get_tracklist_length()
-    emit('tracks', mopidy.get_tracks()[:10 if length >= 10 else length])
+    tracks = []
+    for i in range(10):
+        if not i:
+            tracks.append(mopidy.next_track())
+        else:
+            tracks.append(mopidy.next_track(tracks[i - 1]))
+    emit('tracks', tracks)
+    emit('requests', [r.to_dict() for r in SongRequest.select().filter(done=False)])
 
 
 @socketio.on('search')
+@ws_login_required
 def search(data):
     if data.get('query'):
         results = mopidy.search(data['query'])
@@ -64,15 +76,69 @@ def search(data):
 @socketio.on('request')
 @ws_login_required
 def request_song(data):
-    mopidy.add_track(data['uri'])
+    if current_user.admin:
+        mopidy.play_song_next(data['uri'])
+        message('Song has been admin queued.', 'success')
+    else:
+        if len(current_user.unplayed_requests()) >= MAX_OPEN_REQUESTS:
+            message('Too many open requests.', 'danger')
+            return
+        s, created = SongRequest.get_or_create(uri=data['uri'],
+                                               defaults={
+                                                   'user': current_user.id,
+                                               })
+        if created:
+            song = mopidy.lookup(data['uri'])
+            s.title = song['name']
+            s.artist = song['artists'][0]['name']
+            s.save()
+        message('Requested "{}" by "{}"'.format(s.title, s.artist), 'success')
+
+
+@socketio.on('vote')
+@ws_login_required
+def do_vote(data):
+    vote_type = data['vote']
+    try:
+        song = SongRequest.get(uri=data['uri'])
+    except DoesNotExist:
+        message('Song does not exist', 'danger')
+        return
+    if song.user is current_user:
+        message('Cannot vote for own request', 'warning')
+        return
+    if not current_user.admin:
+        vote, created = Vote.get_or_create(user=current_user.id, song=song)
+        if vote_type == 'upvote' and not vote.value == 1:
+            vote.value = 1
+            song.votes += 1
+        elif vote_type == 'downvote' and not vote.value == -1:
+            vote.value = -1
+            song.votes -= 1
+        else:
+            message('Invalid vote', 'danger')
+            return
+        vote.save()
+    if song.votes >= VOTES_TO_PLAY or current_user.admin:
+        mopidy.play_song_next(song.uri)
+        song.done = True
+        message('"{}" was queued'.format(song.title), 'info')
+    elif song.votes <= VOTES_TO_SKIP or current_user.admin:
+        song.done = True
+        message('"{}" was voted off the island'.format(song.title), 'info')
+    else:
+        message('Voted for "{}" by "{}"'.format(song.title, song.artist), 'success')
+    song.save()
 
 
 @socketio.on('admin')
 @ws_login_required
 def mopidy_ws(data):
     if not current_user.admin:
+        message('Insufficient permissions', 'danger')
         disconnect()
     action = data.pop('action')
+    s = True
     if action == 'play':
         mopidy.play()
     elif action == 'pause':
@@ -82,13 +148,20 @@ def mopidy_ws(data):
     elif action == 'prev':
         mopidy.previous()
     elif action == 'volup':
-        mopidy.fade(4)
+        s = mopidy.fade(4)
     elif action == 'voldown':
-        mopidy.fade(-4)
+        s = mopidy.fade(-4)
     elif action == 'fadedown':
-        mopidy.fade(-20)
+        s = mopidy.fade(-20)
     elif action == 'fadeup':
-        mopidy.fade(20)
+        s = mopidy.fade(20)
+    else:
+        message('Invalid action', 'danger')
+        return
+    if not s:
+        message('Failed to retrieve volume; cowardly refusing to set volume', 'danger')
+        return
+    message('Success', 'success')
 
 
 @login_manager.user_loader
