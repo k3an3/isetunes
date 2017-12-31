@@ -1,8 +1,14 @@
-import subprocess
 from ldap3 import Server, Connection, ALL_ATTRIBUTES
 
 import config
 from models import User
+
+
+def is_admin(r: str) -> bool:
+    for g in [g.decode() for g in r['memberOf']]:
+        if 'CN=Domain Admins,' in g:
+            return True
+    return False
 
 
 def ldap_auth(username: str, password: str) -> User:
@@ -18,11 +24,13 @@ def ldap_auth(username: str, password: str) -> User:
             u, created = User.get_or_create(username=username,
                                             defaults={'ldap': True,
                                                       'password': '',
-                                                      'admin': 'CN=Domain Admins,' in [g.decode() for g in r['memberOf']]
+                                                      'admin': is_admin(r)
                                                       })
             if created:
                 print("Created new user from LDAP: " + username)
+            else:
+                u.admin = is_admin(r)
+                u.save()
         else:
             print("Failed to bind with user " + config.LDAP_FILTER.format(username) + config.LDAP_BASE_DN)
         return u
-

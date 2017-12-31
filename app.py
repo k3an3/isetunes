@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import functools
-import json
-from time import sleep
 
 from flask import Flask, render_template, redirect, request, flash
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
@@ -40,14 +38,16 @@ def index():
 def mopidy_refresh():
     track = mopidy.get_current_track()
     if track:
-        emit('track', json.dumps({
+        emit('track', {
             'title': track['name'],
             'artists': ', '.join(artist['name'] for artist in track['artists']),
             'album': track['album']['name'],
             'art': track['art']
-        }))
+        })
     else:
         emit({})
+    length = mopidy.get_tracklist_length()
+    emit('tracks', mopidy.get_tracks()[:10 if length >= 10 else length])
 
 
 @socketio.on('search')
@@ -56,14 +56,14 @@ def search(data):
         results = mopidy.search(data['query'])
         try:
             results = results['result'][1]['tracks'][:15]
-            emit('search results', json.dumps(results))
+            emit('search results', results)
         except Exception as e:
             pass
 
 
 @socketio.on('request')
 @ws_login_required
-def request(data):
+def request_song(data):
     mopidy.add_track(data['uri'])
 
 

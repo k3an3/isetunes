@@ -3,5 +3,6 @@ eventlet
 flask
 flask-socketio
 flask-login
+ldap3
 peewee
 requests

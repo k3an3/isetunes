@@ -80,6 +80,9 @@
             <button id="fadeup" class="btn btn-info ctl">Boost +20%</button>
         </span>
             </div>
+            <h2>Up Next</h2>
+            <ul style="margin-top:25px;" id="queue" class="list-group">
+            </ul>
         {% endif %}
     </div>
     <div class="col-xs-6">
@@ -107,64 +110,6 @@
 </div>
 <script src="/static/jquery.min.js"></script>
 <script src="/static/socket.io.slim.js"></script>
-<script>
-    var ws = io.connect('//' + document.domain + ':' + location.port);
-    var song = null;
-    var loading = $('#loading');
-    loading.hide();
-
-    ws.on('track', function (data) {
-        song = JSON.parse(data);
-        $('#song-title').html(song.title);
-        $('#song-artist').html(song.artists);
-        $('#album-art').attr('src', song.art);
-    });
-
-    $('#search').on('input', function () {
-        loading.fadeIn();
-        ws.emit('search', {
-            query: $('#search').val()
-        });
-    });
-
-    ws.on('search results', function (data) {
-        $('#results').empty();
-        var songs = JSON.parse(data);
-        songs.forEach(function (song) {
-            $('#results').append('<button class="btn btn-info btn-block song-result" id="' + song.uri + '">' + song.name + ' - ' + song.artists[0].name + '</button>');
-        });
-        loading.fadeOut();
-    });
-
-    ws.on('disconnect', function () {
-        $('#status_u').html('Status: <span class="text-danger">Disconnected</span>');
-    });
-
-    ws.on('connect', function () {
-        $('#status_u').html('Status: <span class="text-success">Connected</span>');
-        ws.emit('refresh');
-    });
-
-    $('#results').on('click', '.song-result', function () {
-        ws.emit('request', {
-            uri: $(this).attr('id')
-        });
-    });
-
-    $('.ctl').on('click', function() {
-        console.log(this);
-        ws.emit('admin', {action: $(this).attr('id')});
-    });
-
-    function refresh() {
-        ws.emit('refresh');
-    }
-
-    refresh();
-    setInterval(refresh, 5000);
-    setTimeout(function() {
-        $('#messages').fadeOut();
-    }, 5000);
-</script>
+<script src="/static/music.js"></script>
 </body>
 </html>

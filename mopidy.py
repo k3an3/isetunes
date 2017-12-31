@@ -44,34 +44,6 @@ class Spotify:
 
 
 class Mopidy:
-    widget = {
-        'buttons': (
-            {
-                'text': 'Play',
-                'method': 'play',
-                'class': 'btn-success'
-            },
-            {
-                'text': 'Pause',
-                'method': 'pause',
-                'class': 'btn-warning'
-            },
-            {
-                'text': 'Stop',
-                'method': 'clear',
-                'class': 'btn-danger'
-            },
-            {
-                'text': 'Next',
-                'method': 'next',
-            },
-            {
-                'text': 'Prev',
-                'method': 'previous'
-            },
-        )
-    }
-
     def __init__(self, host, client_id=None, client_secret=None):
         self.host = "http://" + host + ":6680/mopidy/rpc"
         self.id = 1
@@ -146,7 +118,10 @@ class Mopidy:
         return self.send('core.tracklist.add', uri=uri)
 
     def get_tracks(self):
-        return self.send('core.tracklist.get_tracks')
+        return self.send('core.tracklist.get_tracks')['result']
+
+    def get_tracklist_length(self):
+        return self.send('core.tracklist.get_length')['result']
 
     def search(self, query):
         return self.send('core.library.search', any=[query])
