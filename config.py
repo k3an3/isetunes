@@ -3,6 +3,7 @@ from peewee import SqliteDatabase
 SPOTIFY_CLIENT_ID = ''
 SPOTIFY_CLIENT_SECRET = ''
 MOPIDY_HOST = ''
+SITE_NAME = 'Mopidy-Demo'
 SECRET_KEY = 'something long and random'
 DEBUG = False
 DB = SqliteDatabase('db.sql')

@@ -7,7 +7,7 @@ from flask_socketio import SocketIO, disconnect, emit
 from peewee import DoesNotExist, SqliteDatabase
 
 from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG, DB, LDAP_HOST, \
-    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP
+    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME
 from models import db_init, User, SongRequest, Vote
 from mopidy import Mopidy
 from utils import ldap_auth
@@ -36,7 +36,7 @@ def message(msg: str, alert: str = 'info', broadcast: bool = False):
 
 @app.route("/")
 def index():
-    return render_template('music.html')
+    return render_template('music.html', site_name=SITE_NAME)
 
 
 @socketio.on('refresh')
