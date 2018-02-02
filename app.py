@@ -104,7 +104,7 @@ def do_vote(data):
     except DoesNotExist:
         message('Song does not exist', 'danger')
         return
-    if song.user is current_user:
+    if song.user.id == current_user.id:
         message('Cannot vote for own request', 'warning')
         return
     if not current_user.admin:
@@ -123,7 +123,7 @@ def do_vote(data):
         mopidy.play_song_next(song.uri)
         song.done = True
         message('"{}" was queued'.format(song.title), 'info')
-    elif song.votes <= VOTES_TO_SKIP or current_user.admin:
+    elif song.votes <= VOTES_TO_SKIP * -1 or current_user.admin:
         song.done = True
         message('"{}" was voted off the island'.format(song.title), 'info')
     else:

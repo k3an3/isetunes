@@ -30,7 +30,7 @@ ws.on('tracks', function(tracks) {
         if (t != null) {
             t = t.track;
             var votes = t.votes != undefined ? t.votes : 0;
-            $('#queue').append(t.name + ' - ' + t.artists[0].name + '<a class="songvote" id="upvote-' + t.uri + '" title="Upvote"><span class="fa fa-thumbs-up"></span></a><a id="downvote-' + t.uri + '" title="Downvote" class="songvote text-danger"><span class="fa fa-thumbs-down"></span></a><span id="' + t.uri.split(':')[2] + '">' + votes + '</span><br>');
+            $('#queue').append(t.name + ' - ' + t.artists[0].name + '<a hidden class="songvote" id="upvote-' + t.uri + '" title="Upvote"><span class="fa fa-thumbs-up"></span></a><a hidden id="downvote-' + t.uri + '" title="Downvote" class="songvote text-danger"><span class="fa fa-thumbs-down"></span></a><span hidden id="' + t.uri.split(':')[2] + '">' + votes + '</span><br>');
         }
     });
 });
