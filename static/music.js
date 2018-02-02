@@ -4,6 +4,9 @@ var loading = $('#loading');
 loading.hide();
 var messages = $('#messages2');
 messages.hide();
+var typingTimer;                //timer identifier
+var doneTypingInterval = 500;  //time in ms, 5 second for example
+var search = $('#search');
 
 ws.on('msg', function(data) {
     messages.attr('class', 'alert alert-' + data.class);
@@ -51,14 +54,26 @@ $(document).on("click", '.songvote', function(a) {
     ws.emit('vote', {uri: v[1], vote: v[0]});
 });
 
-$('#search').on('input', function () {
-    loading.fadeIn();
-    ws.emit('search', {
-        query: $('#search').val()
-    });
+//on keyup, start the countdown
+search.on('keyup', function () {
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(do_search, doneTypingInterval);
 });
 
+//on keydown, clear the countdown
+search.on('keydown', function () {
+  clearTimeout(typingTimer);
+});
+
+function do_search() {
+    loading.fadeIn();
+    ws.emit('search', {
+        query: search.val()
+    });
+}
+
 ws.on('search results', function(songs) {
+    console.log(songs);
     $('#results').empty();
     songs.forEach(function (s) {
         $('#results').append('<button class="btn btn-info btn-block song-result" id="' + s.uri + '">' + s.name + ' - ' + s.artists[0].name + '</button>');
@@ -83,6 +98,13 @@ $('#results').on('click', '.song-result', function () {
 
 $('.ctl').on('click', function() {
     ws.emit('admin', {action: $(this).attr('id')});
+});
+
+$('#play_playlist').click(function() {
+    ws.emit('admin', {
+        action: 'playlist',
+        uri: $('#playlist').val()
+    });
 });
 
 function refresh() {

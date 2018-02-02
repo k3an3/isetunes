@@ -29,7 +29,7 @@ class Spotify:
     def spotify_get(self, query: str) -> str:
         return requests.get(SPOTIFY_API.format(query), headers={'Authorization': 'Bearer ' + self.token}).json()
 
-    def auth(self, cid: str, cs: str) -> None:
+    def auth(self, cid: str, cs: str) -> str:
         data = {
             'grant_type': 'client_credentials'
         }
@@ -92,6 +92,7 @@ class Mopidy:
                 break
             self.set_volume(i)
             sleep(delay)
+        return end_volume
 
     def next(self):
         return self.send('core.playback.next')
@@ -133,7 +134,7 @@ class Mopidy:
         return self.send('core.library.search', any=[query])
 
     def lookup(self, uri: str):
-        return self.send('core.library.search', uri=uri)['result'][1]['tracks'][0]
+        return self.send('core.library.search', uri=uri)['result'][0]['tracks'][0]
 
     def next_track(self, tl_track: str = None):
         return self.send('core.tracklist.next_track', tl_track=tl_track)['result']

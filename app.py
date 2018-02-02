@@ -14,7 +14,7 @@ from utils import ldap_auth
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins=[])
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -67,9 +67,9 @@ def search(data):
     if data.get('query'):
         results = mopidy.search(data['query'])
         try:
-            results = results['result'][1]['tracks'][:15]
+            results = results['result'][0]['tracks'][:15]
             emit('search results', results)
-        except Exception as e:
+        except KeyError:
             pass
 
 
@@ -141,6 +141,9 @@ def mopidy_ws(data):
     s = True
     if action == 'play':
         mopidy.play()
+    elif action == 'playlist':
+        mopidy.stop()
+        mopidy.add_track(data['uri'])
     elif action == 'pause':
         mopidy.pause()
     elif action == 'next':

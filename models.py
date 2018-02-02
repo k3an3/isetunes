@@ -48,7 +48,7 @@ class SongRequest(BaseModel):
     done = BooleanField(default=False)
 
     def to_dict(self):
-        d = self.__dict__['_data']
+        d = self.__dict__['__data__']
         d.pop('user')
         return d
 
