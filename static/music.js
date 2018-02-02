@@ -112,16 +112,22 @@ $('#play_playlist').click(function() {
 });
 
 var chat = $('#chat-messages');
+var chatmsg = $('#chat-msg');
+var messages = 0;
+
 ws.on('chat msg', function(data) {
     var username = '<span class="text-primary">' + data.username + ": " + '</span>';
     chat.append('<p>'+ username + data.message + '</p>');
+    messages++;
+    if (messages > 14) {
+        chat.find('p:first').remove();
+    }
 });
 
 $('#chat-div').keypress(function(e) {
-    if(e.which == 13) {
-        console.log(e);
-        ws.emit('chat', {message: $('#chat-msg').val()})
-        $('#chat-msg').val('');
+    if(e.which == 13 && chatmsg.val() != "") {
+        ws.emit('chat', {message: chatmsg.val()});
+        chatmsg.val('');
     }
 });
 
