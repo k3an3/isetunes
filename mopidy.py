@@ -115,14 +115,19 @@ class Mopidy:
     def stop(self):
         return self.send('core.playback.stop')
 
+    def move(self, start: int, end: int, position: int):
+        return self.send('core.tracklist.move', start=start, end=end, to_position=position)
+
     def get_playlists(self):
         return self.send('core.playlists.as_list')
 
     def add_track(self, uri: str, position: int = None):
-        return self.send('core.tracklist.add', uri=uri, at_position=position)
+        return self.send('core.tracklist.add', uris=[uri], at_position=position)
 
     def play_song_next(self, uri: str):
-        return self.add_track(uri=uri, position=self.next_track()['tlid']-1)
+        self.add_track(uri=uri)
+        length = self.get_tracklist_length()
+        return self.move(length - 1, length, 1)
 
     def get_tracks(self):
         return self.send('core.tracklist.get_tracks')['result']

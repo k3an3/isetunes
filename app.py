@@ -119,11 +119,11 @@ def do_vote(data):
             message('Invalid vote', 'danger')
             return
         vote.save()
-    if song.votes >= VOTES_TO_PLAY or current_user.admin:
+    if vote_type == 'upvote' and (song.votes >= VOTES_TO_PLAY or current_user.admin):
         mopidy.play_song_next(song.uri)
         song.done = True
         message('"{}" was queued'.format(song.title), 'info')
-    elif song.votes <= VOTES_TO_SKIP * -1 or current_user.admin:
+    elif vote_type == 'downvote' and (song.votes <= VOTES_TO_SKIP * -1 or current_user.admin):
         song.done = True
         message('"{}" was voted off the island'.format(song.title), 'info')
     else:
@@ -143,7 +143,9 @@ def mopidy_ws(data):
         mopidy.play()
     elif action == 'playlist':
         mopidy.stop()
+        mopidy.clear()
         mopidy.add_track(data['uri'])
+        mopidy.play()
     elif action == 'pause':
         mopidy.pause()
     elif action == 'next':

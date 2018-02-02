@@ -5,7 +5,7 @@ loading.hide();
 var messages = $('#messages2');
 messages.hide();
 var typingTimer;                //timer identifier
-var doneTypingInterval = 500;  //time in ms, 5 second for example
+var doneTypingInterval = 300;  //time in ms, 5 second for example
 var search = $('#search');
 
 ws.on('msg', function(data) {
