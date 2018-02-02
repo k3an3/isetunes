@@ -84,20 +84,20 @@
             <button id="fadeup" class="btn btn-info ctl">Boost +20%</button>
             <br>
             <br>
-                <input type="text" style="width:80%" class="form-control" id="playlist" placeholder="e.g. spotify:user:matthewburket:playlist:7kaQAdK1SfKQyTmf0obu5s">
+                <input type="text" style="width:75%" class="form-control" id="playlist" placeholder="e.g. spotify:user:matthewburket:playlist:7kaQAdK1SfKQyTmf0obu5s">
                 <button class="btn btn-danger" id="play_playlist">Start Playlist</button>
         </span>
             </div>
             <div class="input-group">
             </div>
         {% endif %}
-            <h2>Up Next</h2>
-            <ul style="margin-top:25px;" id="queue" class="list-group">
-            </ul>
-            <hr>
-            <h3>Requests</h3>
-            <ul style="margin-top:25px;" id="requests" class="list-group">
-            </ul>
+        <h2>Up Next</h2>
+        <ul style="margin-top:25px;" id="queue" class="list-group">
+        </ul>
+        <hr>
+        <h3>Requests</h3>
+        <ul style="margin-top:25px;" id="requests" class="list-group">
+        </ul>
     </div>
     <div class="col-xs-6">
         {% if current_user.is_authenticated %}
@@ -119,6 +119,20 @@
                 <br>
                 <input type="submit" class="btn btn-lg btn-primary" value="Go!">
             </form>
+        {% endif %}
+    </div>
+    <div class="col-xs-6">
+        {% if current_user.is_authenticated %}
+            <div class="panel panel-primary" id="chat-div">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Chat</h3>
+                </div>
+                <div id="chat-messages" class="panel-body">
+                </div>
+                <div class="input-group" style="width:100%">
+                    <input type="text" style="width:100%" class="form-control" id="chat-msg" placeholder="Enter to send">
+                </div>
+            </div>
         {% endif %}
     </div>
 </div>

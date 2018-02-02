@@ -66,10 +66,14 @@ search.on('keydown', function () {
 });
 
 function do_search() {
-    loading.fadeIn();
-    ws.emit('search', {
-        query: search.val()
-    });
+    if (search.val() != "") {
+        loading.fadeIn();
+        ws.emit('search', {
+            query: search.val()
+        });
+    } else {
+        $('#results').empty();
+    }
 }
 
 ws.on('search results', function(songs) {
@@ -105,6 +109,20 @@ $('#play_playlist').click(function() {
         action: 'playlist',
         uri: $('#playlist').val()
     });
+});
+
+var chat = $('#chat-messages');
+ws.on('chat msg', function(data) {
+    var username = '<span class="text-primary">' + data.username + ": " + '</span>';
+    chat.append('<p>'+ username + data.message + '</p>');
+});
+
+$('#chat-div').keypress(function(e) {
+    if(e.which == 13) {
+        console.log(e);
+        ws.emit('chat', {message: $('#chat-msg').val()})
+        $('#chat-msg').val('');
+    }
 });
 
 function refresh() {

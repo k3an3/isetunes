@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import functools
+from html import escape
 
 from flask import Flask, render_template, redirect, request, flash
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
@@ -167,6 +168,14 @@ def mopidy_ws(data):
         message('Failed to retrieve volume; cowardly refusing to set volume', 'danger')
         return
     message('Success', 'success')
+
+
+@socketio.on('chat')
+def chat(data):
+    admin = ' (admin)' if current_user.admin else ''
+    emit('chat msg', {'username': current_user.username + admin,
+                      'message': escape(data['message'])
+                      }, broadcast=True)
 
 
 @login_manager.user_loader
