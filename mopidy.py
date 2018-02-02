@@ -5,6 +5,7 @@ mopidy.py
 Websocket JSONRPC client for the Mopidy media server
 """
 import json
+import random
 from time import sleep
 
 import requests
@@ -124,10 +125,10 @@ class Mopidy:
     def add_track(self, uri: str, position: int = None):
         return self.send('core.tracklist.add', uris=[uri], at_position=position)
 
-    def play_song_next(self, uri: str):
+    def play_song_next(self, uri: str, soon=False):
         self.add_track(uri=uri)
         length = self.get_tracklist_length()
-        return self.move(length - 1, length, 1)
+        return self.move(length - 1, length, random.randint(1, 10) if soon else 1)
 
     def get_tracks(self):
         return self.send('core.tracklist.get_tracks')['result']

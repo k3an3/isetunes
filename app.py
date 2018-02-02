@@ -19,6 +19,8 @@ socketio = SocketIO(app, cors_allowed_origins=[])
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+mopidy = Mopidy(MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+
 
 def ws_login_required(f):
     @functools.wraps(f)
@@ -121,7 +123,7 @@ def do_vote(data):
             return
         vote.save()
     if vote_type == 'upvote' and (song.votes >= VOTES_TO_PLAY or current_user.admin):
-        mopidy.play_song_next(song.uri)
+        mopidy.play_song_next(song.uri, soon=not current_user.admin)
         song.done = True
         message('"{}" was queued'.format(song.title), 'info')
     elif vote_type == 'downvote' and (song.votes <= VOTES_TO_SKIP * -1 or current_user.admin):
@@ -225,9 +227,3 @@ def _db_close(exc):
     if not type(DB) == SqliteDatabase:
         if not DB.is_closed():
             DB.close()
-
-
-if __name__ == "__main__":
-    db_init()
-    mopidy = Mopidy(MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
-    socketio.run(app, debug=DEBUG)
