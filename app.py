@@ -176,7 +176,7 @@ def mopidy_ws(data):
 def chat(data):
     admin = ' (admin)' if current_user.admin else ''
     emit('chat msg', {'username': escape(current_user.username) + admin,
-                      'message': escape(data['message'])
+                      'message': escape(data['message'][:80])
                       }, broadcast=True)
 
 
