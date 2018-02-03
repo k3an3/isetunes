@@ -46,7 +46,6 @@ $(document).on("click", '.songvote', function(a) {
     var v = $(this).attr('id').split('-');
     var vspan = $('#' + v[1].split(':')[2]);
     var val = parseInt(vspan.html());
-    console.log(vspan.html() + " " + val);
     if (v[0] == 'upvote')
         vspan.html(val += 1);
     else if (v[0] == 'downvote')
@@ -77,7 +76,6 @@ function do_search() {
 }
 
 ws.on('search results', function(songs) {
-    console.log(songs);
     $('#results').empty();
     songs.forEach(function (s) {
         $('#results').append('<button class="btn btn-info btn-block song-result" id="' + s.uri + '">' + s.name + ' - ' + s.artists[0].name + '</button>');
@@ -113,13 +111,13 @@ $('#play_playlist').click(function() {
 
 var chat = $('#chat-messages');
 var chatmsg = $('#chat-msg');
-var messages = 0;
+var message_count = 0;
 
 ws.on('chat msg', function(data) {
     var username = '<span class="text-primary">' + data.username + ": " + '</span>';
     chat.append('<p>'+ username + data.message + '</p>');
-    messages++;
-    if (messages > 14) {
+    message_count++;
+    if (message_count > 14) {
         chat.find('p:first').remove();
     }
 });

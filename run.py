@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-from app import socketio, app
-from config import DEBUG
-from models import db_init
 
 try:
     import eventlet
@@ -25,6 +22,10 @@ except ImportError:
         print('Using threading')
         create_thread_func = lambda f: threading.Thread(target=f)
         start_thread_func = lambda t: t.start()
+
+from app import socketio, app
+from config import DEBUG
+from models import db_init
 
 db_init()
 socketio.run(app, debug=DEBUG)

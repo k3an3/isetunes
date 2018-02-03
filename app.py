@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 import functools
-from html import escape
 
 from flask import Flask, render_template, redirect, request, flash
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
 from flask_socketio import SocketIO, disconnect, emit
+from markupsafe import escape
 from peewee import DoesNotExist, SqliteDatabase
 
-from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DEBUG, DB, LDAP_HOST, \
+from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DB, LDAP_HOST, \
     MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME
-from models import db_init, User, SongRequest, Vote
+from models import User, SongRequest, Vote
 from mopidy import Mopidy
 from utils import ldap_auth
 
@@ -34,7 +34,7 @@ def ws_login_required(f):
 
 
 def message(msg: str, alert: str = 'info', broadcast: bool = False):
-    socketio.emit('msg', {'class': alert, 'msg': msg}, broadcast=broadcast)
+    socketio.emit('msg', {'class': alert, 'msg': escape(msg)}, broadcast=broadcast)
 
 
 @app.route("/")
@@ -175,7 +175,7 @@ def mopidy_ws(data):
 @socketio.on('chat')
 def chat(data):
     admin = ' (admin)' if current_user.admin else ''
-    emit('chat msg', {'username': current_user.username + admin,
+    emit('chat msg', {'username': escape(current_user.username) + admin,
                       'message': escape(data['message'])
                       }, broadcast=True)
 
