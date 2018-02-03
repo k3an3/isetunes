@@ -34,7 +34,7 @@ def ws_login_required(f):
 
 
 def message(msg: str, alert: str = 'info', broadcast: bool = False):
-    socketio.emit('msg', {'class': alert, 'msg': escape(msg)}, broadcast=broadcast)
+    emit('msg', {'class': alert, 'msg': escape(msg)}, broadcast=broadcast)
 
 
 @app.route("/")
