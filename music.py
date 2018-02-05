@@ -6,7 +6,7 @@ Websocket JSONRPC client for the Mopidy media server
 """
 import json
 import random
-from time import sleep
+from time import sleep, time
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -22,12 +22,30 @@ UNAUTH_COMMANDS = (
 
 SPOTIFY_API = 'https://api.spotify.com/v1/{}'
 
+# Tune to reduce load on Mopidy server
+MOPIDY_REFRESH_SECS = 5
 
-class Spotify:
+
+class Provider:
+    def search(self):
+        raise NotImplemented
+
+    def get_album_art(self, album_id: str, image: int = 1):
+        raise NotImplemented
+
+    def lookup(self, uri: str):
+        raise NotImplemented
+
+
+class Player:
+    pass
+
+
+class Spotify(Provider):
     def __init__(self, client_id: str, client_secret: str):
         self.token = self.auth(client_id, client_secret)
 
-    def spotify_get(self, query: str) -> str:
+    def get(self, query: str) -> str:
         return requests.get(SPOTIFY_API.format(query), headers={'Authorization': 'Bearer ' + self.token}).json()
 
     def auth(self, cid: str, cs: str) -> str:
@@ -40,34 +58,42 @@ class Spotify:
         return r.json().get('access_token')
 
     def get_album_art(self, album_id: str, image: int = 1):
-        r = self.spotify_get('albums/' + album_id)['images'][image]['url']
+        r = self.get('albums/' + album_id)['images'][image]['url']
         return r
 
+    def search(self, query: str, limit: int = 15):
+        return self.get('search?type=track&limit={}&q={}'.format(limit, query))['tracks']['items']
 
-class Mopidy:
-    def __init__(self, host, client_id=None, client_secret=None):
+    def lookup(self, uri: str):
+        return self.get('tracks/' + uri.split(':')[-1])
+
+
+class Mopidy(Player):
+    def __init__(self, host, provider: Provider):
         self.host = "http://" + host + ":6680/mopidy/rpc"
         self.id = 1
-        self.spotify = None
-        if client_id and client_secret:
-            self.spotify = Spotify(client_id, client_secret)
+        self.provider = None
+        self.provider = provider
         self.song = None
+        self.updated = 0
 
     def send(self, method: str, **kwargs):
         msg = {"jsonrpc": "2.0", "id": self.id, 'method': method, 'params': dict(kwargs)}
         return requests.post(self.host, data=json.dumps(msg)).json()
 
     def get_current_track(self):
-        try:
-            song = self.send('core.playback.get_current_tl_track')['result']['track']
-        except TypeError:
-            return None
-        if not self.song or not song['uri'] == self.song['uri']:
-            self.song = song
-            if self.spotify:
-                self.song['art'] = self.spotify.get_album_art(song['album']['uri'].split(':')[2])
-            else:
-                self.song['art'] = '/static/album.png'
+        if time() - self.updated >= MOPIDY_REFRESH_SECS:
+            self.updated = time()
+            try:
+                song = self.send('core.playback.get_current_tl_track')['result']['track']
+            except TypeError:
+                return None
+            if not self.song or not song['uri'] == self.song['uri']:
+                self.song = song
+                if self.provider:
+                    self.song['art'] = self.provider.get_album_art(song['album']['uri'].split(':')[2])
+                else:
+                    self.song['art'] = '/static/album.png'
         return self.song
 
     def get_state(self):
@@ -144,6 +170,9 @@ class Mopidy:
 
     def next_track(self, tl_track: str = None):
         return self.send('core.tracklist.next_track', tl_track=tl_track)['result']
+
+    def set_consume(self, consume: bool = True):
+        return self.send('core.tracklist.set_consume', value=consume)
 
     def custom(self, target, key, value):
         if value == 'true':

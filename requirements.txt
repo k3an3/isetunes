@@ -1,3 +1,4 @@
+markupsafe
 passlib
 eventlet
 flask

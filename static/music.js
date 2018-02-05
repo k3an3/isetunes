@@ -72,13 +72,20 @@ function do_search() {
         });
     } else {
         $('#results').empty();
+        loading.fadeOut();
     }
 }
 
 ws.on('search results', function(songs) {
     $('#results').empty();
     songs.forEach(function (s) {
-        $('#results').append('<button class="btn btn-info btn-block song-result" id="' + s.uri + '">' + s.name + ' - ' + s.artists[0].name + '</button>');
+        var artists = "";
+        s.artists.forEach(function(a) {
+            if (artists != "")
+               artists += ", "
+            artists += a.name;
+        });
+        $('#results').append('<button class="btn btn-info btn-block song-result" id="' + s.uri + '">' + s.name + ' - ' + artists + '</button>');
     });
     loading.fadeOut();
 });
@@ -134,7 +141,7 @@ function refresh() {
 }
 
 refresh();
-setInterval(refresh, 5000);
+setInterval(refresh, 1000);
 setTimeout(function() {
     $('#messages').fadeOut();
 }, 5000);

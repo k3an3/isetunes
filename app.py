@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import functools
+from time import sleep
 
 from flask import Flask, render_template, redirect, request, flash
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
@@ -7,19 +8,27 @@ from flask_socketio import SocketIO, disconnect, emit
 from markupsafe import escape
 from peewee import DoesNotExist, SqliteDatabase
 
-from config import SECRET_KEY, MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, DB, LDAP_HOST, \
-    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME
+from config import SECRET_KEY, DB, LDAP_HOST, \
+    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME, PROVIDER, PLAYER
 from models import User, SongRequest, Vote
-from mopidy import Mopidy
 from utils import ldap_auth
+
+try:
+    provider = PROVIDER
+except ImportError:
+    print("Error! Configure a provider in config_local.py")
+    raise SystemExit
+
+try:
+    player = PLAYER
+except ImportError:
+    print("Error! Configure a player in config_local.py")
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins=[])
 login_manager = LoginManager()
 login_manager.init_app(app)
-
-mopidy = Mopidy(MOPIDY_HOST, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
 
 
 def ws_login_required(f):
@@ -43,8 +52,8 @@ def index():
 
 
 @socketio.on('refresh')
-def mopidy_refresh():
-    track = mopidy.get_current_track()
+def player_refresh():
+    track = player.get_current_track()
     if track:
         emit('track', {
             'title': track['name'],
@@ -57,9 +66,9 @@ def mopidy_refresh():
     tracks = []
     for i in range(10):
         if not i:
-            tracks.append(mopidy.next_track())
+            tracks.append(player.next_track())
         else:
-            tracks.append(mopidy.next_track(tracks[i - 1]))
+            tracks.append(player.next_track(tracks[i - 1]))
     emit('tracks', tracks)
     emit('requests', [r.to_dict() for r in SongRequest.select().filter(done=False)])
 
@@ -68,22 +77,15 @@ def mopidy_refresh():
 @ws_login_required
 def search(data):
     if data.get('query'):
-        results = mopidy.search(data['query'])
-        i = 0
-        if 'tracks' in results['result'][1]:
-            i = 1
-        try:
-            results = results['result'][i]['tracks'][:15]
-            emit('search results', results)
-        except KeyError:
-            pass
+        results = provider.search(data['query'])
+        emit('search results', results)
 
 
 @socketio.on('request')
 @ws_login_required
 def request_song(data):
     if current_user.admin:
-        mopidy.play_song_next(data['uri'])
+        player.play_song_next(data['uri'])
         message('Song has been admin queued.', 'success')
     else:
         if len(current_user.unplayed_requests()) >= MAX_OPEN_REQUESTS:
@@ -94,11 +96,13 @@ def request_song(data):
                                                    'user': current_user.id,
                                                })
         if created:
-            song = mopidy.lookup(data['uri'])
+            song = provider.lookup(data['uri'])
             s.title = song['name']
-            s.artist = song['artists'][0]['name']
+            s.artist = ", ".join([a['name'] for a in song['artists']])
             s.save()
-        message('Requested "{}" by "{}"'.format(s.title, s.artist), 'success')
+            message('Requested "{}" by "{}"'.format(s.title, s.artist), 'success')
+        else:
+            message('Song was already requested!', 'warning')
 
 
 @socketio.on('vote')
@@ -126,7 +130,7 @@ def do_vote(data):
             return
         vote.save()
     if vote_type == 'upvote' and (song.votes >= VOTES_TO_PLAY or current_user.admin):
-        mopidy.play_song_next(song.uri, soon=not current_user.admin)
+        player.play_song_next(song.uri, soon=not current_user.admin)
         song.done = True
         message('"{}" was queued'.format(song.title), 'info')
     elif vote_type == 'downvote' and (song.votes <= VOTES_TO_SKIP * -1 or current_user.admin):
@@ -139,33 +143,38 @@ def do_vote(data):
 
 @socketio.on('admin')
 @ws_login_required
-def mopidy_ws(data):
+def player_ws(data):
     if not current_user.admin:
         message('Insufficient permissions', 'danger')
         disconnect()
     action = data.pop('action')
     s = True
     if action == 'play':
-        mopidy.play()
+        player.play()
     elif action == 'playlist':
-        mopidy.stop()
-        mopidy.clear()
-        mopidy.add_track(data['uri'])
-        mopidy.play()
+        player.stop()
+        sleep(0.3)
+        player.clear()
+        sleep(0.3)
+        player.add_track(data['uri'])
+        sleep(0.3)
+        player.play()
+        sleep(0.3)
+        player.set_consume()
     elif action == 'pause':
-        mopidy.pause()
+        player.pause()
     elif action == 'next':
-        mopidy.next()
+        player.next()
     elif action == 'prev':
-        mopidy.previous()
+        player.previous()
     elif action == 'volup':
-        s = mopidy.fade(4)
+        s = player.fade(4)
     elif action == 'voldown':
-        s = mopidy.fade(-4)
+        s = player.fade(-4)
     elif action == 'fadedown':
-        s = mopidy.fade(-20)
+        s = player.fade(-20)
     elif action == 'fadeup':
-        s = mopidy.fade(20)
+        s = player.fade(20)
     else:
         message('Invalid action', 'danger')
         return

@@ -3,6 +3,14 @@ from peewee import SqliteDatabase
 SPOTIFY_CLIENT_ID = ''
 SPOTIFY_CLIENT_SECRET = ''
 MOPIDY_HOST = ''
+
+"""
+Configure a Provider and player in config_local.py!!!
+Example:
+PROVIDER = Spotify(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+PLAYER = Mopidy(MOPIDY_HOST, PROVIDER)
+"""
+
 SITE_NAME = 'Mopidy-Demo'
 SECRET_KEY = 'something long and random'
 DEBUG = False
