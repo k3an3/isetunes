@@ -59,7 +59,7 @@ def player_refresh():
             'title': track['name'],
             'artists': ', '.join(artist['name'] for artist in track['artists']),
             'album': track['album']['name'],
-            'art': track['art']
+            'art': track.get('art')
         })
     else:
         emit({})
