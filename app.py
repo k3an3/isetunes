@@ -69,8 +69,11 @@ def mopidy_refresh():
 def search(data):
     if data.get('query'):
         results = mopidy.search(data['query'])
+        i = 0
+        if 'tracks' in results['result'][1]:
+            i = 1
         try:
-            results = results['result'][0]['tracks'][:15]
+            results = results['result'][i]['tracks'][:15]
             emit('search results', results)
         except KeyError:
             pass
