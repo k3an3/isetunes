@@ -63,6 +63,10 @@ class SongRequest:
         return str(self.data['user'])
 
     @property
+    def title(self):
+        return self.data['title']
+
+    @property
     def votes(self) -> int:
         try:
             return int(redis.get('votes:' + self.uri))
