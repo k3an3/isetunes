@@ -1,14 +1,17 @@
 from flask_login import UserMixin
 from passlib.handlers.sha2_crypt import sha256_crypt
 from peewee import Model, OperationalError, CharField, BooleanField, ForeignKeyField, IntegerField
+from redis import StrictRedis
 
 from config import DB
+
+redis = StrictRedis(decode_responses=True)
 
 
 def db_init():
     DB.connect()
     try:
-        DB.create_tables([User, SongRequest, Vote])
+        DB.create_tables([User])
         print('Creating tables...')
     except OperationalError:
         pass
@@ -39,21 +42,42 @@ class User(BaseModel, UserMixin):
         return self.requests.filter(done=False)
 
 
-class SongRequest(BaseModel):
-    title = CharField(null=True)
-    artist = CharField(null=True)
-    uri = CharField(unique=True)
-    user = ForeignKeyField(User, related_name='requests')
-    votes = IntegerField(default=0)
-    done = BooleanField(default=False)
+class SongRequest:
+    def __init__(self, uri: str):
+        self.uri = uri
+        self.data = redis.hgetall('request:' + uri)
+
+    def _vote(self, direction: int, user_id: str) -> None:
+        redis.set('vote:{}:{}'.format(self.uri, user_id), direction)
+
+    def vote_up(self, user_id: str) -> None:
+        redis.incr('votes:' + self.uri)
+        self._vote(1, user_id)
+
+    def vote_down(self, user_id: str) -> None:
+        redis.decr('votes:' + self.uri)
+        self._vote(-1, user_id)
+
+    @property
+    def user(self) -> str:
+        return self.data['user']
+
+    @property
+    def votes(self) -> int:
+        return int(redis.get('votes:' + self.uri))
+
+    def get_user_vote(self, user_id: str) -> int:
+        try:
+            return int(redis.get('vote:{}:{}'.format(self.uri, user_id)))
+        except ValueError:
+            return 0
+
+    def delete(self) -> None:
+        redis.delete('request:' + self.uri)
+        redis.delete('votes:' + self.uri)
+        redis.srem('requests', self.uri)
 
     def to_dict(self):
         d = self.__dict__['__data__']
         d.pop('user')
         return d
-
-
-class Vote(BaseModel):
-    user = ForeignKeyField(User, related_name='votes')
-    song = ForeignKeyField(SongRequest, related_name='_votes')
-    value = IntegerField(default=0)

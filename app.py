@@ -10,7 +10,7 @@ from peewee import DoesNotExist, SqliteDatabase
 
 from config import SECRET_KEY, DB, LDAP_HOST, \
     MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME, PROVIDER, PLAYER
-from models import User, SongRequest, Vote
+from models import User, SongRequest, redis
 from utils import ldap_auth
 
 try:
@@ -70,7 +70,7 @@ def player_refresh():
         else:
             tracks.append(player.next_track(tracks[i - 1]))
     emit('tracks', tracks)
-    emit('requests', [r.to_dict() for r in SongRequest.select().filter(done=False)])
+    emit('requests', [redis.hgetall(song).pop('user') for song in redis.smembers('requests')])
 
 
 @socketio.on('search')
@@ -91,54 +91,51 @@ def request_song(data):
         if len(current_user.unplayed_requests()) >= MAX_OPEN_REQUESTS:
             message('Too many open requests.', 'danger')
             return
-        s, created = SongRequest.get_or_create(uri=data['uri'],
-                                               defaults={
-                                                   'user': current_user.id,
-                                               })
-        if created:
-            song = provider.lookup(data['uri'])
-            s.title = song['name']
-            s.artist = ", ".join([a['name'] for a in song['artists']])
-            s.save()
-            message('Requested "{}" by "{}"'.format(s.title, s.artist), 'success')
-        else:
+        if redis.hexists('request:' + data['uri']):
             message('Song was already requested!', 'warning')
+        else:
+            song = provider.lookup(data['uri'])
+            artist = ", ".join([a['name'] for a in song['artists']]),
+            redis.hset('request:' + data['uri'], {
+                'title': song['name'],
+                'artist': artist,
+                'user': current_user.id,
+            })
+            message('Requested "{}" by "{}"'.format(song['name'], artist), 'success')
 
 
 @socketio.on('vote')
 @ws_login_required
 def do_vote(data):
     vote_type = data['vote']
-    try:
-        song = SongRequest.get(uri=data['uri'])
-    except DoesNotExist:
+    song = SongRequest(data['uri'])
+    if not song.data:
         message('Song does not exist', 'danger')
         return
-    if song.user.id == current_user.id:
+    if song.user == current_user.id:
         message('Cannot vote for own request', 'warning')
         return
     if not current_user.admin:
-        vote, created = Vote.get_or_create(user=current_user.id, song=song)
-        if vote_type == 'upvote' and not vote.value == 1:
-            vote.value = 1
-            song.votes += 1
-        elif vote_type == 'downvote' and not vote.value == -1:
-            vote.value = -1
-            song.votes -= 1
+        vote = song.get_user_vote(current_user.id)
+        if vote_type == 'upvote' and not vote == 1:
+            song.vote_up(current_user.id)
+        elif vote_type == 'downvote' and not vote == -1:
+            song.vote_down(current_user.id)
         else:
             message('Invalid vote', 'danger')
             return
-        vote.save()
-    if vote_type == 'upvote' and (song.votes >= VOTES_TO_PLAY or current_user.admin):
+    votes = song.votes
+    if vote_type == 'upvote' \
+            and (votes >= VOTES_TO_PLAY or current_user.admin):
         player.play_song_next(song.uri, soon=not current_user.admin)
-        song.done = True
         message('"{}" was queued'.format(song.title), 'info')
-    elif vote_type == 'downvote' and (song.votes <= VOTES_TO_SKIP * -1 or current_user.admin):
-        song.done = True
+        song.delete()
+    elif vote_type == 'downvote' and (votes <= VOTES_TO_SKIP * -1
+                                      or current_user.admin):
         message('"{}" was voted off the island'.format(song.title), 'info')
+        song.delete()
     else:
         message('Voted for "{}" by "{}"'.format(song.title, song.artist), 'success')
-    song.save()
 
 
 @socketio.on('admin')

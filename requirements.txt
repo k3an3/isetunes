@@ -6,4 +6,5 @@ flask-socketio
 flask-login
 ldap3
 peewee
+redis
 requests
