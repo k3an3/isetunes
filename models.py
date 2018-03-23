@@ -60,24 +60,30 @@ class SongRequest:
 
     @property
     def user(self) -> str:
-        return self.data['user']
+        return str(self.data['user'])
 
     @property
     def votes(self) -> int:
-        return int(redis.get('votes:' + self.uri))
+        try:
+            return int(redis.get('votes:' + self.uri))
+        except (ValueError, TypeError):
+            return 0
 
     def get_user_vote(self, user_id: str) -> int:
         try:
             return int(redis.get('vote:{}:{}'.format(self.uri, user_id)))
-        except ValueError:
+        except (ValueError, TypeError):
             return 0
 
     def delete(self) -> None:
         redis.delete('request:' + self.uri)
         redis.delete('votes:' + self.uri)
         redis.srem('requests', self.uri)
+        redis.srem('user:' + self.user, self.uri)
 
     def to_dict(self):
-        d = self.__dict__['__data__']
-        d.pop('user')
-        return d
+        return {'title': self.data['title'],
+                'artist': self.data['artist'],
+                'uri': self.uri,
+                'votes': self.votes
+                }

@@ -70,7 +70,7 @@ def player_refresh():
         else:
             tracks.append(player.next_track(tracks[i - 1]))
     emit('tracks', tracks)
-    emit('requests', [redis.hgetall(song).pop('user') for song in redis.smembers('requests')])
+    emit('requests', [SongRequest(song).to_dict() for song in redis.smembers('requests')])
 
 
 @socketio.on('search')
@@ -88,19 +88,21 @@ def request_song(data):
         player.play_song_next(data['uri'])
         message('Song has been admin queued.', 'success')
     else:
-        if len(current_user.unplayed_requests()) >= MAX_OPEN_REQUESTS:
+        if redis.scard('user:' + current_user.username) >= MAX_OPEN_REQUESTS:
             message('Too many open requests.', 'danger')
             return
-        if redis.hexists('request:' + data['uri']):
+        if redis.exists('request:' + data['uri']):
             message('Song was already requested!', 'warning')
         else:
             song = provider.lookup(data['uri'])
-            artist = ", ".join([a['name'] for a in song['artists']]),
-            redis.hset('request:' + data['uri'], {
+            artist = ", ".join([a['name'] for a in song['artists']])
+            redis.sadd('requests', data['uri'])
+            redis.hmset('request:' + data['uri'], {
                 'title': song['name'],
                 'artist': artist,
-                'user': current_user.id,
+                'user': current_user.username,
             })
+            redis.sadd('user:' + current_user.username, data['uri'])
             message('Requested "{}" by "{}"'.format(song['name'], artist), 'success')
 
 
@@ -112,15 +114,15 @@ def do_vote(data):
     if not song.data:
         message('Song does not exist', 'danger')
         return
-    if song.user == current_user.id:
+    if song.user == current_user.username:
         message('Cannot vote for own request', 'warning')
         return
     if not current_user.admin:
-        vote = song.get_user_vote(current_user.id)
+        vote = song.get_user_vote(current_user.username)
         if vote_type == 'upvote' and not vote == 1:
-            song.vote_up(current_user.id)
+            song.vote_up(current_user.username)
         elif vote_type == 'downvote' and not vote == -1:
-            song.vote_down(current_user.id)
+            song.vote_down(current_user.username)
         else:
             message('Invalid vote', 'danger')
             return
