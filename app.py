@@ -63,12 +63,7 @@ def player_refresh():
         })
     else:
         emit({})
-    tracks = []
-    for i in range(10):
-        if not i:
-            tracks.append(player.next_track())
-        else:
-            tracks.append(player.next_track(tracks[i - 1]))
+    tracks = player.get_upcoming()
     emit('tracks', tracks)
     emit('requests', [SongRequest(song).to_dict() for song in redis.smembers('requests')])
 

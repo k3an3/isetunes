@@ -76,10 +76,21 @@ class Mopidy(Player):
         self.provider = provider
         self.song = None
         self.updated = 0
+        self.tracks = []
 
     def send(self, method: str, **kwargs):
         msg = {"jsonrpc": "2.0", "id": self.id, 'method': method, 'params': dict(kwargs)}
         return requests.post(self.host, data=json.dumps(msg)).json()
+
+    def get_upcoming(self, count: int = 10):
+        if time() - self.updated >= MOPIDY_REFRESH_SECS:
+            self.tracks = []
+            for i in range(count):
+                if not i:
+                    self.tracks.append(self.next_track())
+                else:
+                    self.tracks.append(self.next_track(self.tracks[i - 1]))
+        return self.tracks
 
     def get_current_track(self):
         if time() - self.updated >= MOPIDY_REFRESH_SECS:
