@@ -128,9 +128,8 @@ ws.on('chat msg', function(data) {
     var username = '<span class="text-primary">' + data.username + ": " + '</span>';
     chat.append('<p>'+ username + data.message + '</p>');
     message_count++;
-    if (message_count > 14) {
-        chat.find('p:first').remove();
-    }
+
+    chat.scrollTop(chat[0].scrollHeight);
 });
 
 $('#chat-div').keypress(function(e) {

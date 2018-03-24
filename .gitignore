@@ -3,3 +3,4 @@
 __pycache__/
 env/
 config_local.py
+db.sql
