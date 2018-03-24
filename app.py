@@ -2,7 +2,7 @@
 import functools
 from time import sleep
 
-from flask import Flask, render_template, redirect, request, flash
+from flask import Flask, render_template, redirect, request, flash, url_for
 from flask_login import LoginManager, current_user, login_required, logout_user, login_user
 from flask_socketio import SocketIO, disconnect, emit
 from markupsafe import escape
@@ -195,7 +195,7 @@ def load_user(user_id):
 @login_required
 def logout():
     logout_user()
-    return redirect('/')
+    return redirect(url_for('/'))
 
 
 @app.route('/login', methods=['POST'])
@@ -215,7 +215,7 @@ def login():
             flash('Logged in successfully.')
     if not user:
         flash('Invalid credentials.')
-    return redirect('/')
+    return redirect(url_for('/'))
 
 
 # This hook ensures that a connection is opened to handle any queries
