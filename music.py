@@ -83,14 +83,13 @@ class Mopidy(Player):
         return requests.post(self.host, data=json.dumps(msg)).json()
 
     def get_upcoming(self, count: int = 10):
-        if not self.tracks or time() - self.updated >= MOPIDY_REFRESH_SECS:
-            self.tracks = []
-            for i in range(count):
-                if not i:
-                    self.tracks.append(self.next_track())
-                else:
-                    self.tracks.append(self.next_track(self.tracks[i - 1]))
-        return self.tracks
+        tracks = []
+        for i in range(count):
+            if not i:
+                tracks.append(self.next_track())
+            else:
+                tracks.append(self.next_track(tracks[i - 1]))
+        return tracks
 
     def get_current_track(self):
         if time() - self.updated >= MOPIDY_REFRESH_SECS:

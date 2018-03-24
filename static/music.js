@@ -99,6 +99,10 @@ ws.on('connect', function () {
     ws.emit('refresh');
 });
 
+ws.on('chatcount', function(data) {
+    $('#chatcount').text(data);
+});
+
 $('#results').on('click', '.song-result', function () {
     ws.emit('request', {
         uri: $(this).attr('id')

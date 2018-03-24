@@ -16,6 +16,7 @@ def db_init():
     except OperationalError:
         pass
     DB.close()
+    redis.delete('chatcount')
 
 
 class BaseModel(Model):
