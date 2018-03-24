@@ -84,7 +84,6 @@ class SongRequest:
             return 0
 
     def delete(self) -> None:
-        redis.delete('request:' + self.uri)
         redis.delete('votes:' + self.uri)
         redis.srem('requests', self.uri)
         redis.srem('user:' + self.user, self.uri)
