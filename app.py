@@ -141,6 +141,7 @@ def player_ws(data):
     if not current_user.admin:
         message('Insufficient permissions', 'danger')
         disconnect()
+        return
     action = data.pop('action')
     s = True
     if action == 'play':
@@ -179,6 +180,7 @@ def player_ws(data):
 
 
 @socketio.on('chat')
+@ws_login_required
 def chat(data):
     admin = ' (admin)' if current_user.admin else ''
     emit('chat msg', {'username': escape(current_user.username) + admin,
