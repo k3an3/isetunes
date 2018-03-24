@@ -63,7 +63,7 @@ def player_refresh():
         })
     else:
         emit({})
-    tracks = player.get_upcoming()
+    tracks = player.get_upcoming(1)
     emit('tracks', tracks)
     emit('requests', [SongRequest(song).to_dict() for song in redis.smembers('requests')])
 
@@ -182,7 +182,7 @@ def player_ws(data):
 def chat(data):
     admin = ' (admin)' if current_user.admin else ''
     emit('chat msg', {'username': escape(current_user.username) + admin,
-                      'message': escape(data['message'][:80])
+                      'message': escape(data['message'][:120])
                       }, broadcast=True)
 
 
