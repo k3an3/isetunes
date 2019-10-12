@@ -8,24 +8,7 @@ from flask_socketio import SocketIO, disconnect, emit
 from markupsafe import escape
 from peewee import DoesNotExist, SqliteDatabase
 
-from config import SECRET_KEY, DB, LDAP_HOST, \
-    MAX_OPEN_REQUESTS, VOTES_TO_PLAY, VOTES_TO_SKIP, SITE_NAME, PROVIDER, PLAYER
-from models import User, SongRequest, redis
-from utils import ldap_auth
-
-try:
-    provider = PROVIDER
-except ImportError:
-    print("Error! Configure a provider in config_local.py")
-    raise SystemExit
-
-try:
-    player = PLAYER
-except ImportError:
-    print("Error! Configure a player in config_local.py")
-
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins=[])
 login_manager = LoginManager()
 login_manager.init_app(app)

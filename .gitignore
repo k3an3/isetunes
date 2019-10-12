@@ -2,5 +2,9 @@
 *.pyc
 __pycache__/
 env/
+venv/
 config_local.py
 db.sql
+*.json
+*.db
+dump.rdb

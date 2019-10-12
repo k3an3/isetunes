@@ -1,76 +1,28 @@
-"""
-mopidy.py
-~~~~~~~~~
-
-Websocket JSONRPC client for the Mopidy media server
-"""
 import json
 import random
 from time import sleep, time
 
 import requests
-from requests.auth import HTTPBasicAuth
+
+from isetunes.player import Player
+from isetunes.provider import Provider
 
 UNAUTH_COMMANDS = (
     'search',
     'get_tracks',
-    'add_track',
+    'queue',
     'get_state',
     'get_current_track',
     'get_time_position',
 )
 
-SPOTIFY_API = 'https://api.spotify.com/v1/{}'
-
 # Tune to reduce load on Mopidy server
 MOPIDY_REFRESH_SECS = 5
 
 
-class Provider:
-    def search(self):
-        raise NotImplemented
-
-    def get_album_art(self, album_id: str, image: int = 1):
-        raise NotImplemented
-
-    def lookup(self, uri: str):
-        raise NotImplemented
-
-
-class Player:
-    pass
-
-
-class Spotify(Provider):
-    def __init__(self, client_id: str, client_secret: str):
-        self.token = self.auth(client_id, client_secret)
-
-    def get(self, query: str) -> str:
-        return requests.get(SPOTIFY_API.format(query), headers={'Authorization': 'Bearer ' + self.token}).json()
-
-    def auth(self, cid: str, cs: str) -> str:
-        data = {
-            'grant_type': 'client_credentials'
-        }
-        r = requests.post('https://accounts.spotify.com/api/token',
-                          data=data,
-                          auth=HTTPBasicAuth(cid, cs))
-        return r.json().get('access_token')
-
-    def get_album_art(self, album_id: str, image: int = 1):
-        r = self.get('albums/' + album_id)['images'][image]['url']
-        return r
-
-    def search(self, query: str, limit: int = 15):
-        return self.get('search?type=track&limit={}&q={}'.format(limit, query))['tracks']['items']
-
-    def lookup(self, uri: str):
-        return self.get('tracks/' + uri.split(':')[-1])
-
-
 class Mopidy(Player):
     def __init__(self, host, provider: Provider):
-        self.host = "http://" + host + ":6680/mopidy/rpc"
+        self.host = "http://" + host + "/mopidy/rpc"
         self.id = 1
         self.provider = None
         self.provider = provider
@@ -158,11 +110,11 @@ class Mopidy(Player):
     def get_playlists(self):
         return self.send('core.playlists.as_list')
 
-    def add_track(self, uri: str, position: int = None):
+    def queue(self, uri: str, position: int = None):
         return self.send('core.tracklist.add', uris=[uri], at_position=position)
 
     def play_song_next(self, uri: str, soon=False):
-        self.add_track(uri=uri)
+        self.queue(uri=uri)
         length = self.get_tracklist_length()
         return self.move(length - 1, length, random.randint(1, 10) if soon else 1)
 

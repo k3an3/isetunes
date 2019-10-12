@@ -23,9 +23,13 @@ except ImportError:
         create_thread_func = lambda f: threading.Thread(target=f)
         start_thread_func = lambda t: t.start()
 
-from app import socketio, app
-from config import DEBUG
-from models import db_init
+from isetunes.app import socketio, app
+from config import DEBUG, SECRET_KEY
+from isetunes.models import db_init
 
 db_init()
+module = globals().get('config', None)
+app.config.update({key: value for key, value in module.__dict__.iteritems() if not (key.startswith('__') or key.startswith('_'))})
+print(app.config['PLAYER'])
+app.secret_key = SECRET_KEY
 socketio.run(app, debug=DEBUG)
